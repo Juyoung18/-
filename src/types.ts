@@ -55,6 +55,7 @@ export interface FetchTrendsResponse {
   keywordFocus?: string;
   aiProviderUsed: 'claude' | 'gemini' | 'heuristic';
   aiModelUsed?: string;
+  aiNotice?: string;
   error?: string;
 }
 

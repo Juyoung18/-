@@ -306,7 +306,7 @@ export const InputForm: React.FC<InputFormProps> = ({
             </div>
             <div className="flex justify-between items-center mt-1">
               <span className="text-[10px] text-slate-400">Anthropic Console 발급</span>
-              <span className="text-[10px] text-amber-600 font-medium">미입력 시 대체 AI / 통계 분석</span>
+              <span className="text-[10px] text-amber-600 font-medium">미입력 또는 크레딧 부족 시 Gemini 자동 대체</span>
             </div>
           </div>
         </div>

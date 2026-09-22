@@ -439,28 +439,38 @@ ${videos.map((v, i) => `[${i + 1}] ID: ${v.id} | 제목: ${v.title} | 조회수:
   }
 ]`;
 
-  let response;
-  try {
-    response = await ai.models.generateContent({
-      model: 'gemini-3.6-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-      },
-    });
-  } catch (err: any) {
-    // If 3.6-flash is unavailable, try gemini-3.8-flash as fallback
-    response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-      },
-    });
+  // Candidate models: gemini-3.6-flash is recommended for current features, with flash-lite and 3.8-flash as alternatives
+  const candidateModels = ['gemini-3.6-flash', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'];
+  let lastError: any = null;
+
+  for (const modelName of candidateModels) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const response = await ai.models.generateContent({
+          model: modelName,
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+          },
+        });
+
+        const text = response.text || '';
+        if (text) {
+          return parseClaudeJsonResponse(text, videos, channelTitle, keywordFocus);
+        }
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`[Gemini API] Model ${modelName} attempt ${attempt + 1} error:`, err.message || err);
+        // If 503 or transient rate limit, wait briefly before retrying or switching models
+        if (attempt === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 800));
+        }
+      }
+    }
   }
 
-  const text = response.text || '[]';
-  return JSON.parse(text) as VideoAIAnalysis[];
+  console.warn('[Gemini API] All Gemini models failed, falling back to heuristic analysis:', lastError?.message);
+  return generateHeuristicAnalysis(videos, channelTitle, keywordFocus);
 }
 
 export async function analyzeVideosWithGemini(
@@ -476,8 +486,14 @@ export async function analyzeVideosWithGemini(
   const results: VideoAIAnalysis[] = [];
   for (let i = 0; i < videos.length; i += chunkSize) {
     const chunk = videos.slice(i, i + chunkSize);
-    const chunkResults = await analyzeVideosWithGeminiSingleBatch(chunk, channelTitle, keywordFocus);
-    results.push(...chunkResults);
+    try {
+      const chunkResults = await analyzeVideosWithGeminiSingleBatch(chunk, channelTitle, keywordFocus);
+      results.push(...chunkResults);
+    } catch (chunkErr: any) {
+      console.warn(`[Gemini API] Chunk error, using heuristic for chunk:`, chunkErr.message);
+      const fallbackResults = generateHeuristicAnalysis(chunk, channelTitle, keywordFocus);
+      results.push(...fallbackResults);
+    }
   }
   return results;
 }

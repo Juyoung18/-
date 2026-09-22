@@ -100,7 +100,7 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
               {aiProviderUsed === 'claude'
                 ? `Claude (${aiModelUsed?.includes('haiku-4-5') ? 'Haiku 4.5' : aiModelUsed?.includes('3-5-haiku') ? 'Haiku 3.5' : aiModelUsed?.split('-')?.[2] || 'Haiku'})`
                 : aiProviderUsed === 'gemini'
-                ? 'Gemini Flash'
+                ? `Gemini (${aiModelUsed?.includes('3.6') ? '3.6 Flash' : aiModelUsed?.includes('3.8') ? '3.8 Flash' : 'Flash'})`
                 : '통계 휴리스틱'}
             </strong>
           </div>
@@ -226,7 +226,7 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
               {aiProviderUsed === 'claude'
                 ? `Claude (${aiModelUsed?.includes('haiku-4-5') ? 'Haiku 4.5' : aiModelUsed?.includes('3-5-haiku') ? 'Haiku 3.5' : aiModelUsed?.split('-')?.[2] || 'Haiku'})`
                 : aiProviderUsed === 'gemini'
-                ? 'Gemini Flash'
+                ? `Gemini (${aiModelUsed?.includes('3.6') ? '3.6 Flash' : aiModelUsed?.includes('3.8') ? '3.8 Flash' : 'Flash'})`
                 : '통계 휴리스틱'}
             </strong>
           </div>

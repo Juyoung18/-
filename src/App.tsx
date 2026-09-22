@@ -58,12 +58,14 @@ export default function App() {
   const [loadingStep, setLoadingStep] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
+  const [aiNotice, setAiNotice] = useState<string | null>(null);
   const [batchProgress, setBatchProgress] = useState<BatchProgressInfo | null>(null);
 
   const handleFetchTrends = async (params: FetchTrendsRequest) => {
     setIsLoading(true);
     setError(null);
     setSuccessNotice(null);
+    setAiNotice(null);
 
     // 1. Resolve unique list of target channels while maintaining order
     const targetChannels: string[] = [];
@@ -170,6 +172,7 @@ export default function App() {
         if (data.collectedAt) lastCollectedAt = data.collectedAt;
         if (data.aiProviderUsed) lastAiProvider = data.aiProviderUsed;
         if (data.aiModelUsed) lastAiModel = data.aiModelUsed;
+        if (data.aiNotice) setAiNotice(data.aiNotice);
 
         // Append new videos (preventing duplicates by id)
         const incomingVideos = data.videos || [];
@@ -254,17 +257,24 @@ export default function App() {
     });
 
     if (accumulatedVideos.length > 0) {
+      const aiLabel =
+        lastAiProvider === 'claude'
+          ? 'Claude Haiku'
+          : lastAiProvider === 'gemini'
+          ? 'Gemini 3.6 Flash'
+          : '통계 분석';
+
       if (failedChannels.length === 0) {
         setSuccessNotice(
           targetChannels.length > 1
-            ? `총 ${accumulatedChannels.length}개 채널에서 각 ${perChannelTarget}개씩 수집하여 총 ${accumulatedVideos.length}개의 통합 데이터 수집 및 Claude Haiku 4.5 분석을 성공적으로 완료했습니다!`
+            ? `총 ${accumulatedChannels.length}개 채널에서 각 ${perChannelTarget}개씩 수집하여 총 ${accumulatedVideos.length}개의 통합 데이터 수집 및 ${aiLabel} 분석을 성공적으로 완료했습니다!`
             : params.keywordFocus?.trim()
-            ? `'${params.keywordFocus.trim()}' 키워드 기준 ${accumulatedVideos.length}개 영상 트렌드 수집 및 Claude 관련도 분석을 완료했습니다!`
-            : `성공적으로 ${accumulatedVideos.length}개의 영상 트렌드 수집 및 Claude 분석을 완료했습니다!`
+            ? `'${params.keywordFocus.trim()}' 키워드 기준 ${accumulatedVideos.length}개 영상 트렌드 수집 및 ${aiLabel} 분석을 완료했습니다!`
+            : `성공적으로 ${accumulatedVideos.length}개의 영상 트렌드 수집 및 ${aiLabel} 분석을 완료했습니다!`
         );
       } else {
         setSuccessNotice(
-          `총 ${accumulatedChannels.length}개 채널에서 ${accumulatedVideos.length}개의 영상 수집 및 Claude 분석을 완료했습니다. (일부 채널 수집 실패: ${failedChannels.map((f) => f.channel).join(', ')})`
+          `총 ${accumulatedChannels.length}개 채널에서 ${accumulatedVideos.length}개의 영상 수집 및 ${aiLabel} 분석을 완료했습니다. (일부 채널 수집 실패: ${failedChannels.map((f) => f.channel).join(', ')})`
         );
         setError(
           `다음 채널 처리 중 오류가 발생했으나 이미 완료된 ${accumulatedVideos.length}개의 데이터는 안전하게 보존되었습니다:\n${failedChannels
@@ -350,6 +360,25 @@ export default function App() {
             <button
               onClick={() => setSuccessNotice(null)}
               className="text-emerald-700 hover:text-emerald-900 font-bold shrink-0"
+            >
+              닫기
+            </button>
+          </div>
+        )}
+
+        {/* AI Notice / Automatic Fallback Notification */}
+        {aiNotice && (
+          <div className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs sm:text-sm flex items-start justify-between gap-3 shadow-xs">
+            <div className="flex items-start gap-2.5">
+              <Sparkles className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-bold text-amber-950">AI 분석 모델 자동 안전 전환 안내</h4>
+                <p className="mt-0.5 text-amber-800 leading-relaxed">{aiNotice}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setAiNotice(null)}
+              className="text-amber-700 hover:text-amber-900 font-bold text-xs shrink-0 cursor-pointer"
             >
               닫기
             </button>

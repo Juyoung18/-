@@ -228,7 +228,20 @@ async function startServer() {
 
       const effectiveKeywordFocus = (keywordFocus || targetTopic || '').trim();
 
-      if (!youtubeApiKey || typeof youtubeApiKey !== 'string' || !youtubeApiKey.trim()) {
+      const effectiveYoutubeApiKey = (
+        (typeof youtubeApiKey === 'string' && youtubeApiKey.trim()) ||
+        process.env.YOUTUBE_API_KEY ||
+        ''
+      ).trim();
+
+      const effectiveClaudeApiKey = (
+        (typeof claudeApiKey === 'string' && claudeApiKey.trim()) ||
+        process.env.ANTHROPIC_API_KEY ||
+        process.env.CLAUDE_API_KEY ||
+        ''
+      ).trim();
+
+      if (!effectiveYoutubeApiKey) {
         return res.status(400).json({
           success: false,
           error: 'YouTube Data API v3 키를 입력해주세요.',
@@ -285,7 +298,7 @@ async function startServer() {
         const chInput = uniqueChannelInputs[i];
         try {
           console.log(`[YouTube Data API] (${i + 1}/${uniqueChannelInputs.length}) 채널 확인 및 조회 시작: '${chInput}'`);
-          const channelItem = await resolveChannel(youtubeApiKey.trim(), chInput);
+          const channelItem = await resolveChannel(effectiveYoutubeApiKey, chInput);
           const channelInfo = {
             id: channelItem.id,
             title: channelItem.snippet?.title || 'Unknown Channel',
@@ -303,7 +316,7 @@ async function startServer() {
 
           console.log(`[YouTube Data API] '${channelInfo.title}' 영상 수집 진행 (최대 ${perChannelLimit}개, 정렬: ${sortBy})...`);
           const rawVideos = await fetchChannelVideos(
-            youtubeApiKey.trim(),
+            effectiveYoutubeApiKey,
             channelItem,
             perChannelLimit,
             sortBy
@@ -401,10 +414,12 @@ async function startServer() {
           ? `통합 채널 (${resolvedChannels.map((c) => c.title).slice(0, 3).join(', ')}${resolvedChannels.length > 3 ? ` 외 ${resolvedChannels.length - 3}개` : ''})`
           : resolvedChannels[0]?.title || '유튜브 채널';
 
-      if (claudeApiKey && claudeApiKey.trim()) {
+      let aiNotice: string | undefined = undefined;
+
+      if (effectiveClaudeApiKey) {
         try {
           aiAnalyses = await analyzeVideosWithClaude(
-            claudeApiKey.trim(),
+            effectiveClaudeApiKey,
             allBaseVideos,
             summaryChannelTitle,
             effectiveKeywordFocus,
@@ -413,10 +428,55 @@ async function startServer() {
           aiProviderUsed = 'claude';
           aiModelUsed = claudeModel;
         } catch (claudeErr: any) {
-          console.warn('[Claude API] Error during analysis, falling back to heuristic:', claudeErr.message);
+          const isCreditIssue =
+            claudeErr.message?.includes('credit balance is too low') ||
+            claudeErr.message?.includes('Plans & Billing') ||
+            claudeErr.message?.includes('400');
+
+          console.warn('[Claude API] Error during analysis, attempting fallback:', claudeErr.message);
+
+          if (isCreditIssue) {
+            aiNotice =
+              'Claude API 크레딧 잔액 부족(400): 내장 Gemini 3.6 Flash로 자동 전환하여 분석을 안전하게 완료했습니다. Claude 분석을 계속 이용하시려면 Anthropic Console(Plans & Billing)에서 크레딧을 충전해주세요.';
+          } else {
+            aiNotice = `Claude API 연결 상태 확인 필요 (${claudeErr.message?.slice(0, 80)}): 내장 Gemini AI로 자동 대체되었습니다.`;
+          }
+
+          if (useGeminiFallback !== false && process.env.GEMINI_API_KEY) {
+            try {
+              aiAnalyses = await analyzeVideosWithGemini(
+                allBaseVideos,
+                summaryChannelTitle,
+                effectiveKeywordFocus
+              );
+              aiProviderUsed = 'gemini';
+              aiModelUsed = 'gemini-3.6-flash';
+            } catch (geminiErr: any) {
+              console.warn('[Gemini API] Fallback error, using heuristic analysis:', geminiErr.message);
+              aiAnalyses = generateHeuristicAnalysis(allBaseVideos, summaryChannelTitle, effectiveKeywordFocus);
+              aiProviderUsed = 'heuristic';
+              aiModelUsed = '통계 및 키워드 분석 (Claude & Gemini 대체)';
+            }
+          } else {
+            aiAnalyses = generateHeuristicAnalysis(allBaseVideos, summaryChannelTitle, effectiveKeywordFocus);
+            aiProviderUsed = 'heuristic';
+            aiModelUsed = '통계 및 키워드 분석 (Claude API 연결 대체)';
+          }
+        }
+      } else if (useGeminiFallback !== false && process.env.GEMINI_API_KEY) {
+        try {
+          aiAnalyses = await analyzeVideosWithGemini(
+            allBaseVideos,
+            summaryChannelTitle,
+            effectiveKeywordFocus
+          );
+          aiProviderUsed = 'gemini';
+          aiModelUsed = 'gemini-3.6-flash';
+        } catch (geminiErr: any) {
+          console.warn('[Gemini API] Error during analysis, falling back to heuristic:', geminiErr.message);
           aiAnalyses = generateHeuristicAnalysis(allBaseVideos, summaryChannelTitle, effectiveKeywordFocus);
           aiProviderUsed = 'heuristic';
-          aiModelUsed = '통계 및 키워드 분석 (Claude API 연결 대체)';
+          aiModelUsed = '통계 및 키워드 기반 분석';
         }
       } else {
         // High-precision keyword relevance and engagement analysis
@@ -472,6 +532,7 @@ async function startServer() {
         keywordFocus: effectiveKeywordFocus || undefined,
         aiProviderUsed,
         aiModelUsed,
+        aiNotice,
       });
     } catch (err: any) {
       console.error('Fetch trends error:', err);
