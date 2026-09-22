@@ -1,0 +1,8 @@
+{
+  "name": "Remix 유튜브 트렌드 엑셀 추출기",
+  "description": "YouTube API, Claude API, 유튜브 채널 아이디를 입력하여 트렌드 영상 데이터와 Claude AI 분석을 추출하고 엑셀(.xlsx)로 다운로드하는 웹 애플리케이션",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
