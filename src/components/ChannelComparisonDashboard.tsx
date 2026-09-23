@@ -61,11 +61,13 @@ export const COMPANY_PASTEL_PALETTE = [
 // 채널명 기반 일관된 색상 반환 함수 (모든 그래프와 카드에서 같은 기업은 반드시 동일한 색상 보장)
 export const getChannelPastelColor = (channelTitle: string, index = 0): string => {
   const title = (channelTitle || '').trim();
+  if (title.includes('포스코')) return '#EB7A77';
   if (title.includes('현대') || title.includes('글로비스')) return '#5B8DEF';
   if (title.includes('LX') || title.includes('판토스')) return '#48BB95';
+  if (title.includes('삼성물산') || title.includes('상사')) return '#9D8DF1';
+  if (title.includes('롯데') || title.includes('글로벌로지스')) return '#E6AF2E';
   if (title.includes('CJ') || title.includes('대한통운')) return '#EB7A77';
   if (title.includes('한진')) return '#9D8DF1';
-  if (title.includes('롯데') || title.includes('글로벌로지스')) return '#E6AF2E';
   
   return COMPANY_PASTEL_PALETTE[index % COMPANY_PASTEL_PALETTE.length];
 };
@@ -73,13 +75,15 @@ export const getChannelPastelColor = (channelTitle: string, index = 0): string =
 // 그래프 및 카드 표시용 정돈된 기업명 추출 헬퍼 (긴 채널명 잘림 방지)
 export const getCleanCompanyName = (title: string): string => {
   const t = (title || '').trim();
+  if (t.includes('포스코')) return '포스코인터내셔널';
   if (t.includes('현대') || t.includes('글로비스')) return '현대글로비스';
   if (t.includes('LX') || t.includes('판토스')) return 'LX판토스';
+  if (t.includes('삼성물산') || t.includes('상사')) return '삼성물산 상사부문';
+  if (t.includes('롯데') || t.includes('글로벌로지스')) return '롯데글로벌로지스';
   if (t.includes('CJ') || t.includes('대한통운')) return 'CJ대한통운';
   if (t.includes('한진')) return '한진';
-  if (t.includes('롯데') || t.includes('글로벌로지스')) return '롯데글로벌로지스';
   const cleaned = t.replace(/\[.*?\]|\(.*?\)/g, '').trim();
-  return cleaned.length > 8 ? cleaned.slice(0, 8) : (cleaned || t);
+  return cleaned.length > 10 ? cleaned.slice(0, 10) : (cleaned || t);
 };
 
 export const ChannelComparisonDashboard: React.FC<ChannelComparisonDashboardProps> = ({
