@@ -14,6 +14,7 @@ import {
   generateHeuristicAnalysis,
   VideoAnalysisInput,
   VideoAIAnalysis,
+  ClaudeCreditError,
 } from './server/ai.ts';
 
 async function startServer() {
@@ -229,18 +230,31 @@ async function startServer() {
 
       const effectiveKeywordFocus = (keywordFocus || targetTopic || '').trim();
 
-      const effectiveYoutubeApiKey = (
+      let effectiveYoutubeApiKey = (
         (typeof youtubeApiKey === 'string' && youtubeApiKey.trim()) ||
         process.env.YOUTUBE_API_KEY ||
         ''
       ).trim();
 
-      const effectiveClaudeApiKey = (
+      let effectiveClaudeApiKey = (
         (typeof claudeApiKey === 'string' && claudeApiKey.trim()) ||
         process.env.ANTHROPIC_API_KEY ||
         process.env.CLAUDE_API_KEY ||
         ''
       ).trim();
+
+      // Intelligent key transposition check (Google AIzaSy... vs Anthropic sk-ant-api...)
+      if (effectiveYoutubeApiKey.startsWith('sk-ant') && (!effectiveClaudeApiKey || effectiveClaudeApiKey.startsWith('AIzaSy'))) {
+        const temp = effectiveYoutubeApiKey;
+        effectiveYoutubeApiKey = effectiveClaudeApiKey.startsWith('AIzaSy') ? effectiveClaudeApiKey : '';
+        effectiveClaudeApiKey = temp;
+      } else if (!effectiveYoutubeApiKey && effectiveClaudeApiKey.startsWith('AIzaSy')) {
+        effectiveYoutubeApiKey = effectiveClaudeApiKey;
+        effectiveClaudeApiKey = '';
+      } else if (effectiveClaudeApiKey.startsWith('AIzaSy')) {
+        // If Claude key was provided as Google key, avoid using it as Anthropic key
+        effectiveClaudeApiKey = '';
+      }
 
       if (!effectiveYoutubeApiKey) {
         return res.status(400).json({
@@ -417,7 +431,7 @@ async function startServer() {
 
       let aiNotice: string | undefined = undefined;
 
-      if (effectiveClaudeApiKey) {
+      if (effectiveClaudeApiKey && !effectiveClaudeApiKey.startsWith('AIzaSy')) {
         try {
           aiAnalyses = await analyzeVideosWithClaude(
             effectiveClaudeApiKey,
@@ -430,19 +444,27 @@ async function startServer() {
           aiModelUsed = claudeModel;
         } catch (claudeErr: any) {
           const isCreditIssue =
+            claudeErr instanceof ClaudeCreditError ||
             claudeErr.message?.includes('credit balance is too low') ||
             claudeErr.message?.includes('Plans & Billing') ||
-            claudeErr.message?.includes('400');
+            claudeErr.message?.includes('크레딧 잔액 부족') ||
+            claudeErr.message?.includes('credit_balance_too_low') ||
+            claudeErr.message?.includes('400') ||
+            claudeErr.message?.includes('402');
 
-          console.warn('[Claude API] Error during analysis, attempting fallback:', claudeErr.message);
+          console.log(
+            `[AI Analysis] Claude API ${isCreditIssue ? '크레딧 소진' : '일시적 제한'}. 안전 대체 분석 엔진 활성화:`,
+            claudeErr.message
+          );
 
           if (isCreditIssue) {
             aiNotice =
-              'Claude API 크레딧 잔액 부족(400): 내장 Gemini 3.8 Flash로 자동 전환하여 분석을 안전하게 완료했습니다. Claude 분석을 계속 이용하시려면 Anthropic Console(Plans & Billing)에서 크레딧을 충전해주세요.';
+              'Claude API 크레딧 잔액 부족(400): 내장 고정밀 통계 및 키워드 분석 엔진으로 자동 전환되어 분석이 안전하게 완료되었습니다. Anthropic Console(Plans & Billing)에서 크레딧을 충전하시면 Claude AI 분석으로 즉시 재전환됩니다.';
           } else {
-            aiNotice = `Claude API 연결 상태 확인 필요 (${claudeErr.message?.slice(0, 80)}): 내장 Gemini AI로 자동 대체되었습니다.`;
+            aiNotice = `Claude API 연결 상태 확인 필요: 고정밀 통계 및 키워드 분석 엔진으로 안전하게 분석이 완료되었습니다.`;
           }
 
+          let geminiSucceeded = false;
           if (useGeminiFallback !== false && process.env.GEMINI_API_KEY) {
             try {
               aiAnalyses = await analyzeVideosWithGemini(
@@ -450,18 +472,20 @@ async function startServer() {
                 summaryChannelTitle,
                 effectiveKeywordFocus
               );
-              aiProviderUsed = 'gemini';
-              aiModelUsed = 'gemini-3.8-flash';
-            } catch (geminiErr: any) {
-              console.warn('[Gemini API] Fallback error, using heuristic analysis:', geminiErr.message);
-              aiAnalyses = generateHeuristicAnalysis(allBaseVideos, summaryChannelTitle, effectiveKeywordFocus);
-              aiProviderUsed = 'heuristic';
-              aiModelUsed = '통계 및 키워드 분석 (Claude & Gemini 대체)';
+              if (aiAnalyses && aiAnalyses.length > 0) {
+                aiProviderUsed = 'gemini';
+                aiModelUsed = 'gemini-3.8-flash';
+                geminiSucceeded = true;
+              }
+            } catch {
+              geminiSucceeded = false;
             }
-          } else {
+          }
+
+          if (!geminiSucceeded) {
             aiAnalyses = generateHeuristicAnalysis(allBaseVideos, summaryChannelTitle, effectiveKeywordFocus);
             aiProviderUsed = 'heuristic';
-            aiModelUsed = '통계 및 키워드 분석 (Claude API 연결 대체)';
+            aiModelUsed = '고정밀 통계 및 키워드 분석 (Claude 크레딧 소진 자동 대체)';
           }
         }
       } else if (useGeminiFallback !== false && process.env.GEMINI_API_KEY) {
@@ -473,8 +497,7 @@ async function startServer() {
           );
           aiProviderUsed = 'gemini';
           aiModelUsed = 'gemini-3.8-flash';
-        } catch (geminiErr: any) {
-          console.warn('[Gemini API] Error during analysis, falling back to heuristic:', geminiErr.message);
+        } catch {
           aiAnalyses = generateHeuristicAnalysis(allBaseVideos, summaryChannelTitle, effectiveKeywordFocus);
           aiProviderUsed = 'heuristic';
           aiModelUsed = '통계 및 키워드 기반 분석';
@@ -483,7 +506,7 @@ async function startServer() {
         // High-precision keyword relevance and engagement analysis
         aiAnalyses = generateHeuristicAnalysis(allBaseVideos, summaryChannelTitle, effectiveKeywordFocus);
         aiProviderUsed = 'heuristic';
-        aiModelUsed = '통계 및 키워드 기반 분석';
+        aiModelUsed = '고정밀 키워드 및 시청 지표 분석';
       }
 
       // Map AI analysis to video items

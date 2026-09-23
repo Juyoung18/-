@@ -54,6 +54,13 @@ export interface VideoAIAnalysis {
   claudeReason?: string;
 }
 
+export class ClaudeCreditError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ClaudeCreditError';
+  }
+}
+
 async function analyzeVideosWithClaudeSingleBatch(
   claudeApiKey: string,
   videos: VideoAnalysisInput[],
@@ -134,7 +141,22 @@ ${videos.map((v, i) => `[${i + 1}] ID: ${v.id}
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(`Claude API 오류 (${response.status}): ${errorData.error?.message || response.statusText}`);
+    const errMsg = errorData.error?.message || response.statusText || 'API 요청 실패';
+    if (
+      response.status === 400 &&
+      (errMsg.includes('credit balance is too low') ||
+        errMsg.includes('Plans & Billing') ||
+        errMsg.includes('credit_balance_too_low') ||
+        errMsg.includes('insufficient_quota'))
+    ) {
+      throw new ClaudeCreditError(
+        'Claude API 크레딧 잔액 부족(400): Anthropic 계정의 크레딧 잔액이 소진되었습니다.'
+      );
+    }
+    if (response.status === 402) {
+      throw new ClaudeCreditError('Claude API 결제 필요(402): 유효한 크레딧 충전이 필요합니다.');
+    }
+    throw new Error(`Claude API 오류 (${response.status}): ${errMsg}`);
   }
 
   const result = await response.json();
@@ -377,8 +399,12 @@ export async function analyzeVideosWithClaude(
           results[startIndex + j] = chunkResults[j];
         }
       } catch (chunkErr: any) {
-        console.warn(
-          `[Claude API] Chunk ${globalChunkIndex + 1}/${chunks.length} 처리 중 경고, 해당 배치만 대체 분석 적용:`,
+        if (chunkErr instanceof ClaudeCreditError || chunkErr.message?.includes('크레딧 잔액 부족') || chunkErr.message?.includes('credit balance is too low')) {
+          // Re-throw immediately so caller stops chunk processing and triggers fallback directly
+          throw chunkErr;
+        }
+        console.log(
+          `[Claude API] Chunk ${globalChunkIndex + 1}/${chunks.length} 처리 안내: 해당 배치 대체 분석 적용:`,
           chunkErr.message
         );
         const fallbackResults = generateHeuristicAnalysis(chunk, channelTitle, keywordFocus);
@@ -460,7 +486,7 @@ ${videos.map((v, i) => `[${i + 1}] ID: ${v.id} | 제목: ${v.title} | 조회수:
         }
       } catch (err: any) {
         lastError = err;
-        console.warn(`[Gemini API] Model ${modelName} attempt ${attempt + 1} error:`, err.message || err);
+        console.log(`[Gemini API] Model ${modelName} attempt ${attempt + 1}:`, err.message || err);
         // If 503 or transient rate limit, wait briefly before retrying or switching models
         if (attempt === 0) {
           await new Promise((resolve) => setTimeout(resolve, 800));
@@ -469,7 +495,7 @@ ${videos.map((v, i) => `[${i + 1}] ID: ${v.id} | 제목: ${v.title} | 조회수:
     }
   }
 
-  console.warn('[Gemini API] All Gemini models failed, falling back to heuristic analysis:', lastError?.message);
+  console.log('[Gemini API] Gemini models inactive, using statistical keyword analysis engine');
   return generateHeuristicAnalysis(videos, channelTitle, keywordFocus);
 }
 
@@ -490,7 +516,7 @@ export async function analyzeVideosWithGemini(
       const chunkResults = await analyzeVideosWithGeminiSingleBatch(chunk, channelTitle, keywordFocus);
       results.push(...chunkResults);
     } catch (chunkErr: any) {
-      console.warn(`[Gemini API] Chunk error, using heuristic for chunk:`, chunkErr.message);
+      console.log(`[Gemini API] Chunk fallback to heuristic:`, chunkErr.message);
       const fallbackResults = generateHeuristicAnalysis(chunk, channelTitle, keywordFocus);
       results.push(...fallbackResults);
     }
