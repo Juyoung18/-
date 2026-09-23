@@ -261,7 +261,7 @@ export default function App() {
         lastAiProvider === 'claude'
           ? 'Claude Haiku'
           : lastAiProvider === 'gemini'
-          ? 'Gemini 3.6 Flash'
+          ? 'Gemini 3.8 Flash'
           : '통계 분석';
 
       if (failedChannels.length === 0) {
@@ -407,7 +407,7 @@ export default function App() {
 
         {/* Result Area */}
         {channel && videos.length > 0 ? (
-          <div>
+          <div id="dashboard-result-container">
             {/* Channel Overview Card */}
             <ChannelCard
               channel={channel}
@@ -425,6 +425,8 @@ export default function App() {
               channelTitle={channels.length > 1 ? `통합 (${channels.length}개 채널)` : channel.title}
               keywordFocus={activeKeywordFocus}
               channels={channels}
+              collectedAt={collectedAt}
+              aiModelUsed={aiModelUsed}
             />
           </div>
         ) : (

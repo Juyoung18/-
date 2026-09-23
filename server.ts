@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
@@ -437,7 +438,7 @@ async function startServer() {
 
           if (isCreditIssue) {
             aiNotice =
-              'Claude API 크레딧 잔액 부족(400): 내장 Gemini 3.6 Flash로 자동 전환하여 분석을 안전하게 완료했습니다. Claude 분석을 계속 이용하시려면 Anthropic Console(Plans & Billing)에서 크레딧을 충전해주세요.';
+              'Claude API 크레딧 잔액 부족(400): 내장 Gemini 3.8 Flash로 자동 전환하여 분석을 안전하게 완료했습니다. Claude 분석을 계속 이용하시려면 Anthropic Console(Plans & Billing)에서 크레딧을 충전해주세요.';
           } else {
             aiNotice = `Claude API 연결 상태 확인 필요 (${claudeErr.message?.slice(0, 80)}): 내장 Gemini AI로 자동 대체되었습니다.`;
           }
@@ -450,7 +451,7 @@ async function startServer() {
                 effectiveKeywordFocus
               );
               aiProviderUsed = 'gemini';
-              aiModelUsed = 'gemini-3.6-flash';
+              aiModelUsed = 'gemini-3.8-flash';
             } catch (geminiErr: any) {
               console.warn('[Gemini API] Fallback error, using heuristic analysis:', geminiErr.message);
               aiAnalyses = generateHeuristicAnalysis(allBaseVideos, summaryChannelTitle, effectiveKeywordFocus);
@@ -471,7 +472,7 @@ async function startServer() {
             effectiveKeywordFocus
           );
           aiProviderUsed = 'gemini';
-          aiModelUsed = 'gemini-3.6-flash';
+          aiModelUsed = 'gemini-3.8-flash';
         } catch (geminiErr: any) {
           console.warn('[Gemini API] Error during analysis, falling back to heuristic:', geminiErr.message);
           aiAnalyses = generateHeuristicAnalysis(allBaseVideos, summaryChannelTitle, effectiveKeywordFocus);

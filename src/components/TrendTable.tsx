@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { YouTubeVideoItem, ChannelInfo } from '../types.ts';
 import {
   FileSpreadsheet,
+  FileCode,
   Download,
   Search,
   ExternalLink,
@@ -27,6 +28,7 @@ import {
   GitCompare,
 } from 'lucide-react';
 import { exportVideosToExcel, exportVideosToCsv, formatNumberWithCommas } from '../utils/excel.ts';
+import { exportDashboardToHtml } from '../utils/htmlExport.ts';
 import { TrendDashboard } from './TrendDashboard.tsx';
 import { ChannelComparisonDashboard } from './ChannelComparisonDashboard.tsx';
 
@@ -35,6 +37,8 @@ interface TrendTableProps {
   channelTitle: string;
   keywordFocus?: string;
   channels?: ChannelInfo[];
+  collectedAt?: string;
+  aiModelUsed?: string;
 }
 
 export const TrendTable: React.FC<TrendTableProps> = ({
@@ -42,6 +46,8 @@ export const TrendTable: React.FC<TrendTableProps> = ({
   channelTitle,
   keywordFocus,
   channels,
+  collectedAt,
+  aiModelUsed,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -508,6 +514,36 @@ export const TrendTable: React.FC<TrendTableProps> = ({
                 </span>
                 <span className="ml-1 px-1.5 py-0.5 rounded-md bg-emerald-700 text-[10px] font-mono">
                   {channelFilteredVideos.length}행
+                </span>
+              </button>
+
+              {/* HTML Report Download */}
+              <button
+                type="button"
+                id="export-html-btn"
+                onClick={() =>
+                  exportDashboardToHtml({
+                    containerId: 'dashboard-result-container',
+                    channelTitle:
+                      selectedChannelFilter === 'ALL'
+                        ? uniqueChannels.length > 1
+                          ? `통합_${uniqueChannels.length}개채널`
+                          : channelTitle
+                        : selectedChannelFilter,
+                    collectedAt: videos[0]?.collectedAt || collectedAt,
+                    keywordFocus,
+                    videos: channelFilteredVideos,
+                    channels,
+                    aiModelUsed,
+                  })
+                }
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-xs shadow-blue-600/30 hover:shadow-md hover:shadow-blue-600/30 transition-all cursor-pointer"
+                title="현재 대시보드 화면(KPI, 그래프, SWOT, 상세 테이블)을 오프라인에서도 열리는 HTML 파일로 저장합니다"
+              >
+                <FileCode className="w-4 h-4" />
+                <span>HTML 다운로드</span>
+                <span className="ml-0.5 px-1.5 py-0.5 rounded-md bg-blue-700 text-[10px] font-mono">
+                  .html
                 </span>
               </button>
 

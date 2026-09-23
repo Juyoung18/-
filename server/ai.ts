@@ -439,8 +439,8 @@ ${videos.map((v, i) => `[${i + 1}] ID: ${v.id} | 제목: ${v.title} | 조회수:
   }
 ]`;
 
-  // Candidate models: gemini-3.6-flash is recommended for current features, with flash-lite and 3.8-flash as alternatives
-  const candidateModels = ['gemini-3.6-flash', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'];
+  // Candidate models compliant with modern @google/genai guidelines: gemini-3.8-flash, gemini-3.1-flash-lite
+  const candidateModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite'];
   let lastError: any = null;
 
   for (const modelName of candidateModels) {

@@ -783,9 +783,9 @@ export const ChannelComparisonDashboard: React.FC<ChannelComparisonDashboardProp
 
       {/* Main Analysis Visualizations (그래프 섹션) */}
       {(activeTab === 'all' || activeTab === 'charts') && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-w-0">
           {/* Chart 1: 채널별 총 조회수 비교 막대그래프 */}
-          <div className="bg-slate-50/70 border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
+          <div className="bg-slate-50/70 border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col justify-between min-w-0">
             <div>
               <div className="flex items-center justify-between mb-3 border-b border-slate-200/70 pb-2.5">
                 <div className="flex items-center gap-2">
@@ -803,8 +803,8 @@ export const ChannelComparisonDashboard: React.FC<ChannelComparisonDashboardProp
                 </div>
               </div>
 
-              <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="h-64 w-full min-w-0" style={{ width: '100%', height: '260px', minHeight: '260px' }}>
+                <ResponsiveContainer width="100%" height={260} minWidth={0} minHeight={240} initialDimension={{ width: 500, height: 260 }}>
                   <BarChart data={barChartData} margin={{ top: 10, right: 10, left: 10, bottom: 25 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                     <XAxis
@@ -839,7 +839,7 @@ export const ChannelComparisonDashboard: React.FC<ChannelComparisonDashboardProp
                         fontSize: '12px',
                       }}
                     />
-                    <Bar dataKey="총 조회수" radius={[6, 6, 0, 0]}>
+                    <Bar dataKey="총 조회수" radius={[6, 6, 0, 0]} isAnimationActive={false}>
                       {barChartData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
@@ -861,7 +861,7 @@ export const ChannelComparisonDashboard: React.FC<ChannelComparisonDashboardProp
           </div>
 
           {/* Chart 2: 업로드 시점 기준 각 채널 조회수 추이 선그래프 */}
-          <div className="bg-slate-50/70 border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
+          <div className="bg-slate-50/70 border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col justify-between min-w-0">
             <div>
               <div className="flex items-center justify-between mb-3 border-b border-slate-200/70 pb-2.5">
                 <div className="flex items-center gap-2">
@@ -890,9 +890,9 @@ export const ChannelComparisonDashboard: React.FC<ChannelComparisonDashboardProp
                 ))}
               </div>
 
-              <div className="h-56 w-full">
+              <div className="h-56 w-full min-w-0" style={{ width: '100%', height: '240px', minHeight: '240px' }}>
                 {timelineData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={240} minWidth={0} minHeight={220} initialDimension={{ width: 500, height: 240 }}>
                     <LineChart data={timelineData} margin={{ top: 10, right: 15, left: 10, bottom: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                       <XAxis
@@ -924,13 +924,14 @@ export const ChannelComparisonDashboard: React.FC<ChannelComparisonDashboardProp
                         <Line
                           key={c.channelTitle}
                           type="monotone"
-                          dataKey={c.channelTitle}
+                          dataKey={(row: any) => (row && row[c.channelTitle] != null ? Number(row[c.channelTitle]) : null)}
                           name={getCleanCompanyName(c.channelTitle)}
                           stroke={c.color}
                           strokeWidth={2.5}
                           dot={{ r: 3.5, fill: c.color, stroke: '#ffffff', strokeWidth: 1.5 }}
                           activeDot={{ r: 6 }}
                           connectNulls
+                          isAnimationActive={false}
                         />
                       ))}
                     </LineChart>
@@ -984,11 +985,11 @@ export const ChannelComparisonDashboard: React.FC<ChannelComparisonDashboardProp
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center min-w-0">
             {/* Pie Chart */}
-            <div className="lg:col-span-5 h-64 flex items-center justify-center relative">
+            <div className="lg:col-span-5 w-full min-w-0 relative flex items-center justify-center" style={{ width: '100%', height: '260px', minHeight: '260px' }}>
               {engagementPieData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={260} minWidth={0} minHeight={240} initialDimension={{ width: 320, height: 260 }}>
                   <PieChart>
                     <Pie
                       data={engagementPieData}
@@ -999,6 +1000,7 @@ export const ChannelComparisonDashboard: React.FC<ChannelComparisonDashboardProp
                       innerRadius={55}
                       outerRadius={85}
                       paddingAngle={4}
+                      isAnimationActive={false}
                     >
                       {engagementPieData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />

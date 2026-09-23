@@ -352,9 +352,9 @@ export const TrendDashboard: React.FC<TrendDashboardProps> = ({
             </div>
           </div>
 
-          <div className="h-68 w-full pt-2">
+          <div className="h-68 w-full pt-2 min-w-0" style={{ width: '100%', height: '270px', minHeight: '270px' }}>
             {activeChartTab === 'views' && (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={270} minWidth={0} minHeight={250} initialDimension={{ width: 500, height: 270 }}>
                 <BarChart data={topVideosData} margin={{ top: 10, right: 10, left: 10, bottom: 25 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis
@@ -400,13 +400,13 @@ export const TrendDashboard: React.FC<TrendDashboardProps> = ({
                       return null;
                     }}
                   />
-                  <Bar yAxisId="left" dataKey="views" fill="#6366f1" radius={[6, 6, 0, 0]} name="조회수" />
+                  <Bar yAxisId="left" dataKey="views" fill="#6366f1" radius={[6, 6, 0, 0]} name="조회수" isAnimationActive={false} />
                 </BarChart>
               </ResponsiveContainer>
             )}
 
             {activeChartTab === 'timeline' && (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={270} minWidth={0} minHeight={250} initialDimension={{ width: 500, height: 270 }}>
                 <AreaChart data={timelineData} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
                   <defs>
                     <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
@@ -450,6 +450,7 @@ export const TrendDashboard: React.FC<TrendDashboardProps> = ({
                     fillOpacity={1}
                     fill="url(#colorViews)"
                     name="조회수"
+                    isAnimationActive={false}
                   />
                 </AreaChart>
               </ResponsiveContainer>

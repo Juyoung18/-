@@ -450,12 +450,12 @@ export const InputForm: React.FC<InputFormProps> = ({
             <button
               type="button"
               onClick={() => {
-                handleQuickPreset(['@현대글로비스', '@LXPantos', '@CJ대한통운', '@한진', '@로젠택배']);
+                handleQuickPreset(['@hyundaiglovis', '@LXPantos_official', '@pointerTV', '@SamsungTrading', '@lotteglogis_TV']);
                 setMaxResults(100);
               }}
               className="text-red-700 font-bold bg-red-50 hover:bg-red-100 border border-red-200 px-2 py-0.5 rounded-md cursor-pointer transition-colors shadow-2xs"
             >
-              ★ 과제 물류 5사 (총 500개): 현대글로비스, Pantos, CJ, 한진, 로젠
+              물류 5사 (총 500개) : @hyundaiglovis, @LXPantos_official, @pointerTV, @SamsungTrading, @lotteglogis_TV
             </button>
             <button
               type="button"
@@ -519,7 +519,7 @@ export const InputForm: React.FC<InputFormProps> = ({
           {/* Quick Recommendation Chips */}
           <div className="flex flex-wrap items-center gap-1.5 mt-2.5 pt-2 border-t border-emerald-100/80 text-[11px]">
             <span className="text-slate-500 font-medium">추천 키워드 포커스:</span>
-            {['생성형 AI', '유튜브 알고리즘', '웹 개발', '생산성 툴', '수익화 모델'].map((kw) => (
+            {['무역 물류', '생성형 AI', '유튜브 알고리즘', '웹 개발', '생산성 툴', '수익화 모델'].map((kw) => (
               <button
                 key={kw}
                 type="button"
