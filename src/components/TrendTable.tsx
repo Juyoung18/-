@@ -164,32 +164,50 @@ export const TrendTable: React.FC<TrendTableProps> = ({
     );
   };
 
-  const getScoreBadge = (score: number) => {
-    if (score >= 90) {
-      return {
-        bg: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-        dot: 'bg-emerald-500',
-        label: '매우 우수',
-      };
+  const getScoreBadge = (rawScore: number) => {
+    const score = Math.max(0, Math.min(100, typeof rawScore === 'number' && !isNaN(rawScore) ? rawScore : 70));
+
+    // Continuous smooth gradient across full 0~100 range:
+    // Low score (0~49) -> Coral / Red (8°) to Golden Yellow (46°)
+    // High score (50~100) -> Golden Yellow (46°) to Emerald Green (145°)
+    let hue: number;
+    if (score <= 50) {
+      const t = score / 50;
+      hue = 8 + (46 - 8) * t;
+    } else {
+      const t = (score - 50) / 50;
+      hue = 46 + (145 - 46) * t;
     }
-    if (score >= 80) {
-      return {
-        bg: 'bg-blue-50 text-blue-800 border-blue-200',
-        dot: 'bg-blue-500',
-        label: '우수',
-      };
+
+    const bg = `hsla(${hue.toFixed(1)}, 88%, 95%, 0.95)`;
+    const border = `hsla(${hue.toFixed(1)}, 72%, 76%, 1)`;
+
+    // High-contrast text lightness calculation ensuring crystal-clear readability
+    let textLightness: number;
+    if (score <= 50) {
+      textLightness = 34 - (34 - 26) * (score / 50);
+    } else {
+      textLightness = 26 - (26 - 22) * ((score - 50) / 50);
     }
-    if (score >= 70) {
-      return {
-        bg: 'bg-amber-50 text-amber-800 border-amber-200',
-        dot: 'bg-amber-500',
-        label: '양호',
-      };
-    }
+    const textHue = hue >= 40 && hue <= 65 ? hue - 6 : hue;
+    const textColor = `hsl(${textHue.toFixed(1)}, 88%, ${textLightness.toFixed(1)}%)`;
+    const dotColor = `hsl(${hue.toFixed(1)}, 88%, 46%)`;
+
+    let label = '보통';
+    if (score >= 90) label = '매우 우수';
+    else if (score >= 80) label = '우수';
+    else if (score >= 70) label = '양호';
+
     return {
-      bg: 'bg-slate-50 text-slate-700 border-slate-200',
-      dot: 'bg-slate-400',
-      label: '보통',
+      style: {
+        backgroundColor: bg,
+        borderColor: border,
+        color: textColor,
+      },
+      dotStyle: {
+        backgroundColor: dotColor,
+      },
+      label,
     };
   };
 
@@ -883,14 +901,17 @@ export const TrendTable: React.FC<TrendTableProps> = ({
 
                         {/* 12. Claude 관련도 점수 */}
                         <td className={`${cellPadding} text-center whitespace-nowrap`}>
-                          <div className={`inline-flex flex-col items-center justify-center px-2 py-1 rounded-lg border ${badge.bg} shadow-2xs min-w-[62px]`}>
+                          <div
+                            className="inline-flex flex-col items-center justify-center px-2 py-1 rounded-lg border shadow-2xs min-w-[62px] transition-colors"
+                            style={badge.style}
+                          >
                             <div className="flex items-center gap-1">
-                              <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`}></span>
+                              <span className="w-1.5 h-1.5 rounded-full" style={badge.dotStyle}></span>
                               <span className="font-bold text-xs font-mono tracking-tight">
                                 {video.claudeScore}점
                               </span>
                             </div>
-                            <span className="text-[8px] font-medium opacity-80 mt-0.2">
+                            <span className="text-[8px] font-medium opacity-85 mt-0.2">
                               {badge.label}
                             </span>
                           </div>
@@ -924,9 +945,10 @@ export const TrendTable: React.FC<TrendTableProps> = ({
                       {video.durationFormatted}
                     </span>
                     <span
-                      className={`absolute top-2.5 right-2.5 font-bold px-2.5 py-1 rounded-xl text-xs shadow-xs border ${badge.bg} flex items-center gap-1.5`}
+                      className="absolute top-2.5 right-2.5 font-bold px-2.5 py-1 rounded-xl text-xs shadow-xs border flex items-center gap-1.5"
+                      style={badge.style}
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`}></span>
+                      <span className="w-1.5 h-1.5 rounded-full" style={badge.dotStyle}></span>
                       Claude {video.claudeScore}점
                     </span>
                   </div>
